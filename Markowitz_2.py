@@ -74,6 +74,15 @@ class MyPortfolio:
         """
         TODO: Complete Task 4 Below
         """
+        df_returns = df.pct_change().fillna(0)
+        df_test = df_returns.copy()
+        # change the biggest value on each row to 1 and other to 0 on every row
+        df_test["SPY"] = -999
+        df_test[df_test == df_test.max(axis=1).values[:, None]] = 1
+        df_test[df_test != 1] = 0
+        # divide each row by the sum of the row
+        df_test = df_test.div(df_test.sum(axis=1), axis=0)
+        self.portfolio_weights = df_test
 
         """
         TODO: Complete Task 4 Above
@@ -121,7 +130,8 @@ class AssignmentJudge:
         _, ax = plt.subplots()
         returns = price.pct_change().fillna(0)
         (1 + returns["SPY"]).cumprod().plot(ax=ax, label="SPY")
-        (1 + strategy[1]["Portfolio"]).cumprod().plot(ax=ax, label=f"MyPortfolio")
+        (1 + strategy[1]["Portfolio"]
+         ).cumprod().plot(ax=ax, label=f"MyPortfolio")
 
         ax.set_title("Cumulative Returns")
         ax.set_xlabel("Date")

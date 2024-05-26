@@ -48,7 +48,7 @@ df_returns = df.pct_change().fillna(0)
 
 
 """
-Problem 1: 
+Problem 1:
 
 Implement an equal weighting strategy as dataframe "eqw". Please do "not" include SPY.
 """
@@ -61,12 +61,13 @@ class EqualWeightPortfolio:
     def calculate_weights(self):
         # Get the assets by excluding the specified column
         assets = df.columns[df.columns != self.exclude]
-        self.portfolio_weights = pd.DataFrame(index=df.index, columns=df.columns)
+        self.portfolio_weights = pd.DataFrame(
+            index=df.index, columns=df.columns)
 
         """
         TODO: Complete Task 1 Below
         """
-
+        self.portfolio_weights[assets] = 1 / len(assets)
         """
         TODO: Complete Task 1 Above
         """
@@ -112,12 +113,26 @@ class RiskParityPortfolio:
         assets = df.columns[df.columns != self.exclude]
 
         # Calculate the portfolio weights
-        self.portfolio_weights = pd.DataFrame(index=df.index, columns=df.columns)
+        self.portfolio_weights = pd.DataFrame(
+            index=df.index, columns=df.columns)
 
         """
         TODO: Complete Task 2 Below
         """
-
+        stds = df_returns.rolling(window=50).std()
+        # turn all of the data into 1/data
+        stds = 1/stds
+        # ignore the "SPY" column
+        stds["SPY"] = 0.0000
+        stds["SUM"] = stds.sum(axis=1)
+        # divide each value by the sum of the row
+        stds = stds.div(stds["SUM"], axis=0)
+        # shifts the data down by 1 so that the data is shifted by 1 day
+        stds = stds.shift(periods=1)
+        # turn all the values in the first 50 rows into 0
+        stds.iloc[:51] = 0
+        stds = stds.drop(columns=["SUM"])
+        self.portfolio_weights = stds.copy()
         """
         TODO: Complete Task 2 Above
         """
@@ -165,16 +180,18 @@ class MeanVariancePortfolio:
         assets = df.columns[df.columns != self.exclude]
 
         # Calculate the portfolio weights
-        self.portfolio_weights = pd.DataFrame(index=df.index, columns=df.columns)
+        self.portfolio_weights = pd.DataFrame(
+            index=df.index, columns=df.columns)
 
         for i in range(self.lookback + 1, len(df)):
-            R_n = df_returns.copy()[assets].iloc[i - self.lookback : i]
+            R_n = df_returns.copy()[assets].iloc[i - self.lookback: i]
             self.portfolio_weights.loc[df.index[i], assets] = self.mv_opt(
                 R_n, self.gamma
             )
 
         self.portfolio_weights.ffill(inplace=True)
         self.portfolio_weights.fillna(0, inplace=True)
+        self.portfolio_weights
 
     def mv_opt(self, R_n, gamma):
         Sigma = R_n.cov().values
@@ -260,7 +277,8 @@ class Helper:
             MeanVariancePortfolio("SPY").get_results(),
             MeanVariancePortfolio("SPY", gamma=100).get_results(),
             MeanVariancePortfolio("SPY", lookback=100).get_results(),
-            MeanVariancePortfolio("SPY", lookback=100, gamma=100).get_results(),
+            MeanVariancePortfolio("SPY", lookback=100,
+                                  gamma=100).get_results(),
         ]
 
     def plot_performance(self, strategy_list=None):
@@ -268,8 +286,10 @@ class Helper:
         _, ax = plt.subplots()
 
         (1 + df_returns["SPY"]).cumprod().plot(ax=ax, label="SPY")
-        (1 + self.eqw[1]["Portfolio"]).cumprod().plot(ax=ax, label="equal_weight")
-        (1 + self.rp[1]["Portfolio"]).cumprod().plot(ax=ax, label="risk_parity")
+        (1 + self.eqw[1]["Portfolio"]
+         ).cumprod().plot(ax=ax, label="equal_weight")
+        (1 + self.rp[1]["Portfolio"]
+         ).cumprod().plot(ax=ax, label="risk_parity")
 
         if strategy_list != None:
             for i, strategy in enumerate(strategy_list):
@@ -351,7 +371,8 @@ class AssignmentJudge:
             MeanVariancePortfolio("SPY").get_results()[0],
             MeanVariancePortfolio("SPY", gamma=100).get_results()[0],
             MeanVariancePortfolio("SPY", lookback=100).get_results()[0],
-            MeanVariancePortfolio("SPY", lookback=100, gamma=100).get_results()[0],
+            MeanVariancePortfolio("SPY", lookback=100,
+                                  gamma=100).get_results()[0],
         ]
 
     def check_dataframe_similarity(self, df1, df2, tolerance=0.01):
@@ -378,7 +399,8 @@ class AssignmentJudge:
 
     def compare_dataframe_list(self, std_ans_list, ans_list, tolerance=0.01):
         if len(std_ans_list) != len(ans_list):
-            raise ValueError("Both lists must have the same number of DataFrames.")
+            raise ValueError(
+                "Both lists must have the same number of DataFrames.")
 
         results = []
         for df1, df2 in zip(std_ans_list, ans_list):
